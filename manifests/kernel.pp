@@ -1,7 +1,4 @@
 class ganeti::kernel {
-    file { "/opt/kernel":
-        ensure => directory,
-    }
 
     file { "kernelfiles":
         path => "/opt/kernel/",
