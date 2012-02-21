@@ -1,0 +1,71 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          gwm_cache
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts a service for the Twisted plugin '$PLUGIN'
+# Description:       Generic plugin starter for twistd plugins
+### END INIT INFO
+# Author: Garret Heaton (powdahound@gmail.com)
+
+PLUGIN="gwm_cache"
+SERVICE_DIR="<%= path %>"
+DAEMON="$SERVICE_DIR/bin/twistd"
+PIDFILE=/var/run/$PLUGIN/$PLUGIN.pid
+LOGFILE=/var/log/$PLUGIN/$PLUGIN.log
+DAEMON_OPTS="--pidfile=$PIDFILE --logfile=$LOGFILE $PLUGIN"
+DESC="$PLUGIN twistd plugin"
+NAME="$PLUGIN"
+
+export PYTHONPATH=$SERVICE_DIR
+
+test -x $DAEMON || exit 1
+
+test -f /lib/lsb/init-functions || exit 1
+. /lib/lsb/init-functions
+
+case "$1" in
+  start)
+    for dir in `dirname $PIDFILE` `dirname $LOGFILE`
+    do
+      [ ! -e "$dir" ] && { mkdir -p "$dir"; chown www-data "$dir"; }
+    done
+    if ! status_of_proc -p "${PIDFILE}" "${DAEMON}" "${NAME}" 2> /dev/null > /dev/null
+    then
+      log_begin_msg "Starting $DESC"
+      start-stop-daemon --start --quiet --pidfile $PIDFILE \
+        --user www-data --chuid www-data --startas $DAEMON -- $DAEMON_OPTS
+      log_end_msg $?
+    else
+      log_failure_msg "$DESC is already running"
+      log_end_msg 1
+    fi
+    ;;
+  stop)
+    log_begin_msg "Stopping $DESC"
+    start-stop-daemon -Kq -R 10 -p $PIDFILE
+    log_end_msg $?
+    ;;
+  restart)
+    log_begin_msg "Restarting $DESC"
+    start-stop-daemon -Kq -R 10 -p $PIDFILE
+    sleep 1
+    start-stop-daemon --start --quiet --pidfile $PIDFILE \
+      --user www-data --startas $DAEMON -- $DAEMON_OPTS
+    log_end_msg $?
+    ;;
+  status)
+    if [ ! -e "$PIDFILE" ]
+    then
+      echo " * $PLUGIN is not running"
+    fi
+    status_of_proc -p "${PIDFILE}" "${DAEMON}" "${NAME}"
+    ;;
+  *)
+    log_success_msg "Usage: $0 {start|stop|status}"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,25 @@
+<% if ssl -%>
+<VirtualHost <%= vhost_name %>:80>
+    ServerName <%= vhost_name %>
+    DocumentRoot <%= docroot %>
+    Redirect permanent / https://<%= vhost_name %>/
+</VirtualHost>
+<% end -%>
+
+<VirtualHost <%= vhost_name %>:<%= port %>>
+    ServerName <%= vhost_name %>
+    DocumentRoot <%= docroot %>
+
+<% if ssl -%>
+    SSLEngine on
+    SSLCertificateFile    <%= ssl_cert_file %>
+    SSLCertificateKeyFile <%= ssl_cert_key  %>
+    SSLVerifyClient none
+    SSLVerifyDepth 10
+<% end -%>
+
+    Alias /static <%= docroot %>/static
+    WSGIDaemonProcess ganeti user=www-data group=www-data threads=10
+    WSGIScriptAlias / <%= docroot %>/django.wsgi
+
+</VirtualHost>
